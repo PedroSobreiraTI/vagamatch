@@ -1,0 +1,30 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: vaga-service
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/${DB_NAME:vagamatch}
+    username: ${DB_USER:vagamatch}
+    password: ${DB_PASSWORD:vagamatch}
+  jpa:
+    hibernate:
+      ddl-auto: validate   # quem cria as tabelas é o Flyway
+    open-in-view: false
+  flyway:
+    enabled: true
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: 5672
+    username: ${RABBIT_USER:vagamatch}
+    password: ${RABBIT_PASSWORD:vagamatch}
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
