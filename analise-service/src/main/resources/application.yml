@@ -20,7 +20,8 @@ spring:
     listener:
       simple:
         default-requeue-rejected: false
-        # 1 tentativa + 2 retries com backoff (2s, 4s); depois o FalhaAnaliseRecoverer manda pra DLQ
+        # 1 tentativa + 2 retries com backoff (2s, 4s); depois o FalhaAnaliseRecoverer manda pra DLQ.
+        # Erro permanente do Gemini (4xx, chave ausente) não retenta: ver RabbitConfig.
         retry:
           enabled: true
           max-retries: 2
@@ -30,6 +31,8 @@ spring:
 gemini:
   api-key: ${GEMINI_API_KEY:}
   model: ${GEMINI_MODEL:gemini-3.5-flash}
+  # tentados em ordem quando o modelo principal responde 503 (sobrecarregado)
+  fallback-models: ${GEMINI_FALLBACK_MODELS:gemini-3.5-flash-lite,gemini-2.5-flash}
   base-url: https://generativelanguage.googleapis.com/v1beta
   timeout: 30s
 

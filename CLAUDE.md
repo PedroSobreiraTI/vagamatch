@@ -56,8 +56,11 @@ Retry do listener: no Boot 4 a propriedade é `retry.max-retries` (o `max-attemp
   - Regra na `CalculadoraMatch`: obrigatória pesa 2, diferencial 1, nível fora do cálculo. Ranking e estatísticas são queries nativas agregadas (pesos passados por parâmetro). Vaga não ANALISADA → 409.
   - Métricas: `vagamatch.vagas.analisadas{resultado}`, `vagamatch.vagas.pendentes` (gauge), `vagamatch.match.calculos{tipo}`.
   - Limitação conhecida: sinônimos não casam ("API REST" x "REST API"). Ideia futura: tabela de aliases.
-- [ ] 5. `feature/testes`: JUnit 5 + Mockito nos services (principalmente cálculo de match e consumers), cobrindo casos de erro.
+- [x] 5. `feature/testes`: JUnit 5 + Mockito nos services (principalmente cálculo de match e consumers), cobrindo casos de erro.
   - Não fazer retry em erro permanente do Gemini (4xx: chave inválida, request malformado, modelo inexistente, além de chave ausente): ir direto pro recoverer (DLQ + vaga em ERRO). Exceção: 429 (rate limit) é transitório e continua com retry, assim como 5xx e timeout.
+  - Feito com `GeminiPermanenteException` + `RabbitListenerRetrySettingsCustomizer` no `RabbitConfig` (predicate que procura a exceção na cadeia de causas).
+  - Fallback de modelo: 503 no modelo principal tenta `gemini.fallback-models` em ordem (`GEMINI_FALLBACK_MODELS`, padrão `gemini-3.5-flash-lite,gemini-2.5-flash`). Todos com 503 → erro transitório (retry).
+  - `GeminiService` testado com `MockRestServiceServer` (construtor package-private recebe o `RestClient.Builder`). Entidades nos testes do vaga-service vêm do `Fixtures` (id setado por reflexão).
 - [ ] 6. Release: README completo com diagrama Mermaid da arquitetura, exemplos de uso, merge na `main` e tag `v1.0.0`.
 
 Atualize este checklist ao fim de cada etapa.
