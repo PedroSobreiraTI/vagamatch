@@ -1,0 +1,60 @@
+# VagaMatch
+
+Projeto de portfólio: microsserviços em Java que analisam descrições de vagas com IA (Gemini), extraem as skills exigidas e calculam o match com o perfil do candidato.
+
+## Stack
+
+Java 21, Spring Boot 4.1, Spring Data JPA, PostgreSQL 17, Flyway, RabbitMQ 4, springdoc (Swagger), Docker Compose, Maven multi-módulo (wrapper na raiz).
+
+## Estrutura
+
+- `vaga-service` (porta 8080): CRUD de vagas e candidatos, match e estatísticas. Dono do banco.
+- `analise-service` (porta 8081): consome vagas novas, chama o Gemini e devolve as skills extraídas. Sem banco.
+- Mensageria: exchange topic `vagamatch.events` e DLX `vagamatch.dlx`.
+  - `vaga.criada` → fila `analise.vaga-criada` (consumida pelo analise-service)
+  - `vaga.analisada` → fila `vaga.vaga-analisada` (consumida pelo vaga-service)
+- Cada fila tem DLQ com sufixo `.dlq`. As constantes ficam no `RabbitConfig` de cada serviço.
+
+## Convenções
+
+- Código e nomes de domínio em português (Vaga, Candidato, criadaEm), seguindo o que já existe.
+- Pacotes por camada: `domain`, `repository`, `dto`, `service`, `controller`, `exception`, `config`.
+- DTOs como `record`; controllers nunca expõem entidades.
+- Mudança de schema sempre em nova migration Flyway (`V2__...`, `V3__...`). Nunca editar a V1.
+- Erros via `GlobalExceptionHandler` no formato ProblemDetail.
+- `ddl-auto: validate`: as entidades precisam bater com as migrations.
+- Configs sensíveis só por variável de ambiente. Nunca commitar `.env` nem chave de API.
+
+## Git Flow
+
+- `main`: só versões estáveis. `develop`: integração. Uma branch `feature/*` por etapa, saindo da `develop`.
+- Commits no padrão Conventional Commits em português (`feat:`, `fix:`, `test:`, `docs:`, `chore:`).
+- Antes de cada commit: `./mvnw -B verify` passando e o serviço subindo.
+- Não fazer merge nem push sem eu confirmar.
+
+## Como rodar
+
+```
+docker compose up -d
+./mvnw -pl vaga-service spring-boot:run
+./mvnw -pl analise-service spring-boot:run
+```
+
+Windows: `.\mvnw.cmd`. Swagger em http://localhost:8080/swagger-ui.html.
+
+## Status das etapas
+
+- [x] 1. Multi-módulo + RabbitMQ (`feature/estrutura-microsservicos`)
+- [x] 2. Entidades JPA, CRUD e Swagger (`feature/crud-vagas`)
+- [ ] 3. `feature/analise-gemini`: migration V2 com status da vaga (PENDENTE, ANALISADA, ERRO); vaga-service publica `vaga.criada` ao cadastrar; analise-service consome, chama o Gemini (`GEMINI_API_KEY`) pedindo JSON com skills, categoria e se é obrigatória ou diferencial, e publica `vaga.analisada`; vaga-service consome, salva as skills e atualiza o status. Falha no Gemini vai pra DLQ após retry.
+- [ ] 4. `feature/match-estatisticas`: `GET /candidatos/{id}/match/{vagaId}` (% de match ponderando obrigatórias, skills que faltam), ranking de vagas por match e `GET /estatisticas/skills` (mais pedidas). Métricas customizadas com Micrometer.
+- [ ] 5. `feature/testes`: JUnit 5 + Mockito nos services (principalmente cálculo de match e consumers), cobrindo casos de erro.
+- [ ] 6. Release: README completo com diagrama Mermaid da arquitetura, exemplos de uso, merge na `main` e tag `v1.0.0`.
+
+Atualize este checklist ao fim de cada etapa.
+
+## Como trabalhar comigo
+
+- Uma etapa por vez. Antes de codar, me mostra o plano da etapa em poucas linhas.
+- No fim, me explica o que mudou de forma curta, porque preciso conseguir falar sobre o código em entrevista.
+- Respostas em português, diretas.
