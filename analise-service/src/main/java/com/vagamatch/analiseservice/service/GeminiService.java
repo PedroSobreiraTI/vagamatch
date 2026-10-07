@@ -4,9 +4,16 @@ import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.vagamatch.analiseservice.config.GeminiProperties;
 import com.vagamatch.analiseservice.dto.SkillExtraida;
 import com.vagamatch.analiseservice.exception.AnaliseException;
+import com.vagamatch.analiseservice.exception.GeminiPermanenteException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.stereotype.Service;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.HttpServerErrorException;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.client.RestClientException;
 import tools.jackson.core.JacksonException;
@@ -22,6 +29,8 @@ import java.util.Map;
  */
 @Service
 public class GeminiService {
+
+    private static final Logger log = LoggerFactory.getLogger(GeminiService.class);
 
     private static final List<String> CATEGORIAS = List.of(
             "LINGUAGEM", "FRAMEWORK", "BANCO_DE_DADOS", "CLOUD", "DEVOPS",
@@ -59,24 +68,34 @@ public class GeminiService {
     private final JsonMapper jsonMapper;
     private final RestClient restClient;
 
+    @Autowired
     public GeminiService(GeminiProperties properties, JsonMapper jsonMapper) {
+        this(properties, jsonMapper, RestClient.builder().requestFactory(requestFactory(properties)));
+    }
+
+    /** Recebe o builder pronto pra os testes poderem ligar um MockRestServiceServer. */
+    GeminiService(GeminiProperties properties, JsonMapper jsonMapper, RestClient.Builder restClientBuilder) {
         this.properties = properties;
         this.jsonMapper = jsonMapper;
+        this.restClient = restClientBuilder.baseUrl(properties.baseUrl()).build();
+    }
 
+    private static SimpleClientHttpRequestFactory requestFactory(GeminiProperties properties) {
         Duration timeout = properties.timeout() != null ? properties.timeout() : Duration.ofSeconds(30);
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(5));
         requestFactory.setReadTimeout(timeout);
-
-        this.restClient = RestClient.builder()
-                .baseUrl(properties.baseUrl())
-                .requestFactory(requestFactory)
-                .build();
+        return requestFactory;
     }
 
+    /**
+     * Tenta o modelo principal; se ele responder 503 (sobrecarregado), tenta os fallbacks em ordem.
+     * Lança GeminiPermanenteException pra erro que não adianta repetir (chave, 4xx)
+     * e AnaliseException pro resto (429, 5xx, timeout, resposta estranha), que o listener retenta.
+     */
     public List<SkillExtraida> extrairSkills(String titulo, String descricao) {
         if (!properties.chaveConfigurada()) {
-            throw new AnaliseException("GEMINI_API_KEY não configurada");
+            throw new GeminiPermanenteException("GEMINI_API_KEY não configurada");
         }
 
         Map<String, Object> corpo = Map.of(
@@ -87,20 +106,41 @@ public class GeminiService {
                         "responseSchema", RESPONSE_SCHEMA,
                         "temperature", 0));
 
-        String resposta;
+        List<String> modelos = properties.modelosEmOrdem();
+        HttpServerErrorException.ServiceUnavailable ultimo503 = null;
+        for (String modelo : modelos) {
+            try {
+                return lerSkills(chamar(modelo, corpo));
+            } catch (HttpServerErrorException.ServiceUnavailable e) {
+                ultimo503 = e;
+                log.warn("Gemini {} indisponível (503), tentando o próximo modelo", modelo);
+            }
+        }
+        throw new AnaliseException("Gemini indisponível (503) em todos os modelos: " + modelos, ultimo503);
+    }
+
+    private String chamar(String modelo, Map<String, Object> corpo) {
         try {
-            resposta = restClient.post()
-                    .uri("/models/{modelo}:generateContent", properties.model())
+            return restClient.post()
+                    .uri("/models/{modelo}:generateContent", modelo)
                     .header("x-goog-api-key", properties.apiKey()) // no header, nunca na URL (não vaza em log)
                     .contentType(MediaType.APPLICATION_JSON)
                     .body(corpo)
                     .retrieve()
                     .body(String.class);
+        } catch (HttpServerErrorException.ServiceUnavailable e) {
+            throw e; // quem decide é o laço de fallback
+        } catch (HttpClientErrorException e) {
+            String erro = "Erro ao chamar o Gemini (" + modelo + "): " + e.getMessage();
+            // 429 é limite de requisições: passa sozinho, vale o retry. Os outros 4xx não mudam tentando de novo.
+            if (e.getStatusCode().value() == HttpStatus.TOO_MANY_REQUESTS.value()) {
+                throw new AnaliseException(erro, e);
+            }
+            throw new GeminiPermanenteException(erro, e);
         } catch (RestClientException e) {
-            throw new AnaliseException("Erro ao chamar o Gemini: " + e.getMessage(), e);
+            // 5xx (fora o 503) e timeout/conexão (ResourceAccessException)
+            throw new AnaliseException("Erro ao chamar o Gemini (" + modelo + "): " + e.getMessage(), e);
         }
-
-        return lerSkills(resposta);
     }
 
     private List<SkillExtraida> lerSkills(String resposta) {
