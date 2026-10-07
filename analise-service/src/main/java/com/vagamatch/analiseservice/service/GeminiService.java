@@ -81,7 +81,7 @@ public class GeminiService {
     }
 
     private static SimpleClientHttpRequestFactory requestFactory(GeminiProperties properties) {
-        Duration timeout = properties.timeout() != null ? properties.timeout() : Duration.ofSeconds(30);
+        Duration timeout = properties.timeout() != null ? properties.timeout() : Duration.ofSeconds(15);
         SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
         requestFactory.setConnectTimeout(Duration.ofSeconds(5));
         requestFactory.setReadTimeout(timeout);

@@ -34,7 +34,7 @@ gemini:
   # tentados em ordem quando o modelo principal responde 503 (sobrecarregado)
   fallback-models: ${GEMINI_FALLBACK_MODELS:gemini-3.5-flash-lite,gemini-2.5-flash}
   base-url: https://generativelanguage.googleapis.com/v1beta
-  timeout: 30s
+  timeout: 15s   # por modelo; com fallback, o pior caso é 15s x modelos por tentativa
 
 management:
   endpoints:
