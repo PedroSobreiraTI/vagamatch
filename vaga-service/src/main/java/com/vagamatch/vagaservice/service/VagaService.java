@@ -10,6 +10,7 @@ import com.vagamatch.vagaservice.dto.VagaRequest;
 import com.vagamatch.vagaservice.dto.VagaResponse;
 import com.vagamatch.vagaservice.exception.RecursoNaoEncontradoException;
 import com.vagamatch.vagaservice.repository.VagaRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.context.ApplicationEventPublisher;
@@ -34,12 +35,14 @@ public class VagaService {
     private final VagaRepository vagaRepository;
     private final SkillService skillService;
     private final ApplicationEventPublisher eventPublisher;
+    private final MeterRegistry meterRegistry;
 
     public VagaService(VagaRepository vagaRepository, SkillService skillService,
-                       ApplicationEventPublisher eventPublisher) {
+                       ApplicationEventPublisher eventPublisher, MeterRegistry meterRegistry) {
         this.vagaRepository = vagaRepository;
         this.skillService = skillService;
         this.eventPublisher = eventPublisher;
+        this.meterRegistry = meterRegistry;
     }
 
     @Transactional
@@ -92,12 +95,18 @@ public class VagaService {
 
         if (!event.sucesso()) {
             vaga.marcarErroNaAnalise();
+            contarAnalise("erro");
             log.warn("Análise da vaga falhou: vagaId={}, erro={}", vaga.getId(), event.erro());
             return;
         }
 
         vaga.registrarAnalise(resolverSkills(event.skills()));
+        contarAnalise("sucesso");
         log.info("Vaga analisada: vagaId={}, skills={}", vaga.getId(), vaga.getSkills().size());
+    }
+
+    private void contarAnalise(String resultado) {
+        meterRegistry.counter("vagamatch.vagas.analisadas", "resultado", resultado).increment();
     }
 
     /**

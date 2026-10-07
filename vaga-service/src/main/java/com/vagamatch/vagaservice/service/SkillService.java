@@ -18,11 +18,18 @@ public class SkillService {
         this.skillRepository = skillRepository;
     }
 
-    /** Reaproveita a skill se já existir (sem diferenciar maiúscula/minúscula), senão cria. */
+    /**
+     * Reaproveita a skill se já existir (sem diferenciar maiúscula/minúscula), senão cria.
+     * Se a existente ainda não tem categoria, aproveita a que veio.
+     */
     @Transactional
     public Skill buscarOuCriar(String nome, String categoria) {
         String nomeNormalizado = nome.trim();
         return skillRepository.findByNomeIgnoreCase(nomeNormalizado)
+                .map(skill -> {
+                    skill.completarCategoria(categoria);
+                    return skill;
+                })
                 .orElseGet(() -> skillRepository.save(new Skill(nomeNormalizado, categoria)));
     }
 
