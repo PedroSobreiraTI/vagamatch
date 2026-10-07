@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;
+import java.util.Map;
 import java.util.Set;
 
 @Entity
@@ -32,6 +33,10 @@ public class Vaga {
     @Column(name = "criada_em", nullable = false, updatable = false)
     private LocalDateTime criadaEm;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 20)
+    private StatusVaga status = StatusVaga.PENDENTE;
+
     @OneToMany(mappedBy = "vaga", cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<VagaSkill> skills = new HashSet<>();
 
@@ -59,6 +64,16 @@ public class Vaga {
         skills.add(new VagaSkill(this, skill, obrigatoria));
     }
 
+    /** Recebe as skills extraídas pelo analise-service (chave = skill, valor = obrigatória). */
+    public void registrarAnalise(Map<Skill, Boolean> skillsExtraidas) {
+        skillsExtraidas.forEach(this::adicionarSkill);
+        this.status = StatusVaga.ANALISADA;
+    }
+
+    public void marcarErroNaAnalise() {
+        this.status = StatusVaga.ERRO;
+    }
+
     public Long getId() { return id; }
     public String getTitulo() { return titulo; }
     public String getEmpresa() { return empresa; }
@@ -66,5 +81,6 @@ public class Vaga {
     public String getDescricao() { return descricao; }
     public String getLink() { return link; }
     public LocalDateTime getCriadaEm() { return criadaEm; }
+    public StatusVaga getStatus() { return status; }
     public Set<VagaSkill> getSkills() { return skills; }
 }

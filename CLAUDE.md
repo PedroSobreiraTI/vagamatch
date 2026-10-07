@@ -42,11 +42,15 @@ docker compose up -d
 
 Windows: `.\mvnw.cmd`. Swagger em http://localhost:8080/swagger-ui.html.
 
+Os serviços leem o `.env` da raiz via `spring.config.import` (`.env` e `../.env`, porque o `spring-boot:run` roda na pasta do módulo). Variável de ambiente real tem prioridade sobre o `.env`.
+
+Retry do listener: no Boot 4 a propriedade é `retry.max-retries` (o `max-attempts` foi depreciado e é ignorado).
+
 ## Status das etapas
 
 - [x] 1. Multi-módulo + RabbitMQ (`feature/estrutura-microsservicos`)
 - [x] 2. Entidades JPA, CRUD e Swagger (`feature/crud-vagas`)
-- [ ] 3. `feature/analise-gemini`: migration V2 com status da vaga (PENDENTE, ANALISADA, ERRO); vaga-service publica `vaga.criada` ao cadastrar; analise-service consome, chama o Gemini (`GEMINI_API_KEY`) pedindo JSON com skills, categoria e se é obrigatória ou diferencial, e publica `vaga.analisada`; vaga-service consome, salva as skills e atualiza o status. Falha no Gemini vai pra DLQ após retry.
+- [x] 3. `feature/analise-gemini`: migration V2 com status da vaga (PENDENTE, ANALISADA, ERRO); vaga-service publica `vaga.criada` ao cadastrar; analise-service consome, chama o Gemini (`GEMINI_API_KEY`) pedindo JSON com skills, categoria e se é obrigatória ou diferencial, e publica `vaga.analisada`; vaga-service consome, salva as skills e atualiza o status. Falha no Gemini vai pra DLQ após retry.
 - [ ] 4. `feature/match-estatisticas`: `GET /candidatos/{id}/match/{vagaId}` (% de match ponderando obrigatórias, skills que faltam), ranking de vagas por match e `GET /estatisticas/skills` (mais pedidas). Métricas customizadas com Micrometer.
 - [ ] 5. `feature/testes`: JUnit 5 + Mockito nos services (principalmente cálculo de match e consumers), cobrindo casos de erro.
 - [ ] 6. Release: README completo com diagrama Mermaid da arquitetura, exemplos de uso, merge na `main` e tag `v1.0.0`.

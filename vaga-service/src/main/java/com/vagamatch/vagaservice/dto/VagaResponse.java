@@ -1,5 +1,6 @@
 package com.vagamatch.vagaservice.dto;
 
+import com.vagamatch.vagaservice.domain.StatusVaga;
 import com.vagamatch.vagaservice.domain.Vaga;
 
 import java.time.LocalDateTime;
@@ -14,6 +15,7 @@ public record VagaResponse(
         String descricao,
         String link,
         LocalDateTime criadaEm,
+        StatusVaga status,
         List<SkillDaVagaResponse> skills
 ) {
     public static VagaResponse from(Vaga vaga) {
@@ -22,7 +24,7 @@ public record VagaResponse(
                 .sorted(Comparator.comparing(SkillDaVagaResponse::nome))
                 .toList();
         return new VagaResponse(vaga.getId(), vaga.getTitulo(), vaga.getEmpresa(), vaga.getLocalizacao(),
-                vaga.getDescricao(), vaga.getLink(), vaga.getCriadaEm(), skills);
+                vaga.getDescricao(), vaga.getLink(), vaga.getCriadaEm(), vaga.getStatus(), skills);
     }
 
     public record SkillDaVagaResponse(String nome, String categoria, boolean obrigatoria) {
