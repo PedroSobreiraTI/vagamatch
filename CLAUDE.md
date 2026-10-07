@@ -61,7 +61,9 @@ Retry do listener: no Boot 4 a propriedade é `retry.max-retries` (o `max-attemp
   - Feito com `GeminiPermanenteException` + `RabbitListenerRetrySettingsCustomizer` no `RabbitConfig` (predicate que procura a exceção na cadeia de causas).
   - Fallback de modelo: 503 no modelo principal tenta `gemini.fallback-models` em ordem (`GEMINI_FALLBACK_MODELS`, padrão `gemini-3.5-flash-lite,gemini-2.5-flash`). Todos com 503 → erro transitório (retry).
   - `GeminiService` testado com `MockRestServiceServer` (construtor package-private recebe o `RestClient.Builder`). Entidades nos testes do vaga-service vêm do `Fixtures` (id setado por reflexão).
-- [ ] 6. Release: README completo com diagrama Mermaid da arquitetura, exemplos de uso, merge na `main` e tag `v1.0.0`.
+- [x] 6. Release (`feature/release`): README completo com diagrama Mermaid da arquitetura, exemplos de uso, merge na `main` e tag `v1.0.0`.
+  - CI no GitHub Actions (`.github/workflows/ci.yml`): `./mvnw -B verify` em push e PR, badge no README. O `mvnw` precisa do bit de execução no git (`git update-index --chmod=+x`).
+  - `gemini.timeout` reduzido pra 15s (vale por modelo tentado).
 
 Atualize este checklist ao fim de cada etapa.
 
