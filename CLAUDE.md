@@ -52,7 +52,10 @@ Retry do listener: no Boot 4 a propriedade é `retry.max-retries` (o `max-attemp
 - [x] 1. Multi-módulo + RabbitMQ (`feature/estrutura-microsservicos`)
 - [x] 2. Entidades JPA, CRUD e Swagger (`feature/crud-vagas`)
 - [x] 3. `feature/analise-gemini`: migration V2 com status da vaga (PENDENTE, ANALISADA, ERRO); vaga-service publica `vaga.criada` ao cadastrar; analise-service consome, chama o Gemini (`GEMINI_API_KEY`) pedindo JSON com skills, categoria e se é obrigatória ou diferencial, e publica `vaga.analisada`; vaga-service consome, salva as skills e atualiza o status. Falha no Gemini vai pra DLQ após retry.
-- [ ] 4. `feature/match-estatisticas`: `GET /candidatos/{id}/match/{vagaId}` (% de match ponderando obrigatórias, skills que faltam), ranking de vagas por match e `GET /estatisticas/skills` (mais pedidas). Métricas customizadas com Micrometer.
+- [x] 4. `feature/match-estatisticas`: `GET /candidatos/{id}/match/{vagaId}` (% de match ponderando obrigatórias, skills que faltam), ranking de vagas por match e `GET /estatisticas/skills` (mais pedidas). Métricas customizadas com Micrometer.
+  - Regra na `CalculadoraMatch`: obrigatória pesa 2, diferencial 1, nível fora do cálculo. Ranking e estatísticas são queries nativas agregadas (pesos passados por parâmetro). Vaga não ANALISADA → 409.
+  - Métricas: `vagamatch.vagas.analisadas{resultado}`, `vagamatch.vagas.pendentes` (gauge), `vagamatch.match.calculos{tipo}`.
+  - Limitação conhecida: sinônimos não casam ("API REST" x "REST API"). Ideia futura: tabela de aliases.
 - [ ] 5. `feature/testes`: JUnit 5 + Mockito nos services (principalmente cálculo de match e consumers), cobrindo casos de erro.
   - Não fazer retry em erro permanente do Gemini (4xx: chave inválida, request malformado, modelo inexistente, além de chave ausente): ir direto pro recoverer (DLQ + vaga em ERRO). Exceção: 429 (rate limit) é transitório e continua com retry, assim como 5xx e timeout.
 - [ ] 6. Release: README completo com diagrama Mermaid da arquitetura, exemplos de uso, merge na `main` e tag `v1.0.0`.

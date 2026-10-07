@@ -24,6 +24,13 @@ public class Skill {
         this.categoria = categoria;
     }
 
+    /** Skills criadas pelo perfil do candidato nascem sem categoria; a análise da vaga completa. */
+    public void completarCategoria(String categoria) {
+        if (this.categoria == null && categoria != null) {
+            this.categoria = categoria;
+        }
+    }
+
     public Long getId() { return id; }
     public String getNome() { return nome; }
     public String getCategoria() { return categoria; }
