@@ -13,7 +13,7 @@ import org.springframework.context.annotation.Configuration;
 
 /**
  * Topologia de mensageria do analise-service.
- * Consome vaga.criada e (na etapa 3) publica vaga.analisada.
+ * Consome vaga.criada e publica vaga.analisada. Falha após o retry vai pra DLQ (FalhaAnaliseRecoverer).
  */
 @Configuration
 public class RabbitConfig {
