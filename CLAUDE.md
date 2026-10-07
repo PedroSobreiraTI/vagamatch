@@ -18,7 +18,8 @@ Java 21, Spring Boot 4.1, Spring Data JPA, PostgreSQL 17, Flyway, RabbitMQ 4, sp
 ## Convenções
 
 - Código e nomes de domínio em português (Vaga, Candidato, criadaEm), seguindo o que já existe.
-- Pacotes por camada: `domain`, `repository`, `dto`, `service`, `controller`, `exception`, `config`.
+- Pacotes por camada: `domain`, `repository`, `dto`, `service`, `controller`, `exception`, `config`, `messaging`.
+- `messaging`: listeners (`@RabbitListener`), publishers e recoverers do RabbitMQ. Ficam finos e delegam a regra pro `service`. Os eventos trafegados são `record` no `dto` (`VagaCriadaEvent`, `VagaAnalisadaEvent`).
 - DTOs como `record`; controllers nunca expõem entidades.
 - Mudança de schema sempre em nova migration Flyway (`V2__...`, `V3__...`). Nunca editar a V1.
 - Erros via `GlobalExceptionHandler` no formato ProblemDetail.
@@ -53,6 +54,7 @@ Retry do listener: no Boot 4 a propriedade é `retry.max-retries` (o `max-attemp
 - [x] 3. `feature/analise-gemini`: migration V2 com status da vaga (PENDENTE, ANALISADA, ERRO); vaga-service publica `vaga.criada` ao cadastrar; analise-service consome, chama o Gemini (`GEMINI_API_KEY`) pedindo JSON com skills, categoria e se é obrigatória ou diferencial, e publica `vaga.analisada`; vaga-service consome, salva as skills e atualiza o status. Falha no Gemini vai pra DLQ após retry.
 - [ ] 4. `feature/match-estatisticas`: `GET /candidatos/{id}/match/{vagaId}` (% de match ponderando obrigatórias, skills que faltam), ranking de vagas por match e `GET /estatisticas/skills` (mais pedidas). Métricas customizadas com Micrometer.
 - [ ] 5. `feature/testes`: JUnit 5 + Mockito nos services (principalmente cálculo de match e consumers), cobrindo casos de erro.
+  - Não fazer retry em erro permanente do Gemini (4xx: chave inválida, request malformado, modelo inexistente, além de chave ausente): ir direto pro recoverer (DLQ + vaga em ERRO). Exceção: 429 (rate limit) é transitório e continua com retry, assim como 5xx e timeout.
 - [ ] 6. Release: README completo com diagrama Mermaid da arquitetura, exemplos de uso, merge na `main` e tag `v1.0.0`.
 
 Atualize este checklist ao fim de cada etapa.
