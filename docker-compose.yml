@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:17
+    container_name: vagamatch-postgres
+    environment:
+      POSTGRES_DB: ${DB_NAME:-vagamatch}
+      POSTGRES_USER: ${DB_USER:-vagamatch}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-vagamatch}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+
+  rabbitmq:
+    image: rabbitmq:4-management
+    container_name: vagamatch-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBIT_USER:-vagamatch}
+      RABBITMQ_DEFAULT_PASS: ${RABBIT_PASSWORD:-vagamatch}
+    ports:
+      - "5672:5672"     # AMQP (usado pelos serviços)
+      - "15672:15672"   # painel web
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+
+volumes:
+  postgres-data:
+  rabbitmq-data:

@@ -1,0 +1,46 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: analise-service
+  # O Spring não lê .env sozinho. Importa o .env da raiz como properties:
+  # ".env" quando roda da raiz (java -jar) e "../.env" quando roda pelo mvnw -pl
+  # (o spring-boot:run usa a pasta do módulo como diretório de trabalho).
+  # Variáveis de ambiente de verdade continuam tendo prioridade.
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: 5672
+    username: ${RABBIT_USER:vagamatch}
+    password: ${RABBIT_PASSWORD:vagamatch}
+    listener:
+      simple:
+        default-requeue-rejected: false
+        # 1 tentativa + 2 retries com backoff (2s, 4s); depois o FalhaAnaliseRecoverer manda pra DLQ.
+        # Erro permanente do Gemini (4xx, chave ausente) não retenta: ver RabbitConfig.
+        retry:
+          enabled: true
+          max-retries: 2
+          initial-interval: 2s
+          multiplier: 2
+
+gemini:
+  api-key: ${GEMINI_API_KEY:}
+  model: ${GEMINI_MODEL:gemini-3.5-flash}
+  # tentados em ordem quando o modelo principal responde 503 (sobrecarregado)
+  fallback-models: ${GEMINI_FALLBACK_MODELS:gemini-3.5-flash-lite,gemini-2.5-flash}
+  base-url: https://generativelanguage.googleapis.com/v1beta
+  timeout: 15s   # por modelo; com fallback, o pior caso é 15s x modelos por tentativa
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always

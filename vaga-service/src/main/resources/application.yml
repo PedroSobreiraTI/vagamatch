@@ -1,0 +1,53 @@
+server:
+  port: 8080
+
+spring:
+  application:
+    name: vaga-service
+  # O Spring não lê .env sozinho. Importa o .env da raiz como properties:
+  # ".env" quando roda da raiz (java -jar) e "../.env" quando roda pelo mvnw -pl
+  # (o spring-boot:run usa a pasta do módulo como diretório de trabalho).
+  # Variáveis de ambiente de verdade continuam tendo prioridade.
+  config:
+    import:
+      - optional:file:.env[.properties]
+      - optional:file:../.env[.properties]
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:5432/${DB_NAME:vagamatch}
+    username: ${DB_USER:vagamatch}
+    password: ${DB_PASSWORD:vagamatch}
+  jpa:
+    hibernate:
+      ddl-auto: validate   # quem cria as tabelas é o Flyway
+    open-in-view: false
+    properties:
+      hibernate:
+        default_batch_fetch_size: 50   # evita N+1 ao carregar as skills das vagas
+  flyway:
+    enabled: true
+  rabbitmq:
+    host: ${RABBIT_HOST:localhost}
+    port: 5672
+    username: ${RABBIT_USER:vagamatch}
+    password: ${RABBIT_PASSWORD:vagamatch}
+    listener:
+      simple:
+        default-requeue-rejected: false   # esgotou o retry -> DLQ, sem loop infinito
+        retry:
+          enabled: true
+          max-retries: 2   # 1 tentativa + 2 retries (no Boot 4 max-attempts foi substituído)
+          initial-interval: 2s
+          multiplier: 2
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
