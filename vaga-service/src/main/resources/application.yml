@@ -12,6 +12,9 @@ spring:
     hibernate:
       ddl-auto: validate   # quem cria as tabelas é o Flyway
     open-in-view: false
+    properties:
+      hibernate:
+        default_batch_fetch_size: 50   # evita N+1 ao carregar as skills das vagas
   flyway:
     enabled: true
   rabbitmq:
@@ -19,6 +22,10 @@ spring:
     port: 5672
     username: ${RABBIT_USER:vagamatch}
     password: ${RABBIT_PASSWORD:vagamatch}
+
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
 
 management:
   endpoints:
